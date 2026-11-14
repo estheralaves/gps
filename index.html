@@ -279,7 +279,7 @@ async function unlock(code){
   if(fr){const o=fr.o;if(st&&st.photo)o.photo=st.photo;['generated','minMin','top','max'].forEach(k=>{if(fr.meta[k]!=null)DATA[k]=fr.meta[k]});return o}
   if(st)return st;throw new Error('no')}
 function gate(msg){
-  app.innerHTML=`<div class="gate"><form class="gate-card" id="gf"><img class="crest" src="${CREST}" alt=""><span class="eyebrow" style="display:block">Deportivo Alavés · Femenino B · 26/27</span><h1>Mis datos GPS</h1><p>Tus números de entrenos y partidos, comparados con tu perfil de partido y con tu posición. Entra con tu código personal.</p>
+  app.innerHTML=`<div class="gate"><form class="gate-card" id="gf"><img class="crest" src="${CREST}" alt=""><span class="eyebrow" style="display:block">Deportivo Alavés · Femenino B · 26/27</span><h1>Mis datos GPS</h1><p>Tus números de entrenos y partidos. Entra con tu código personal.</p>
   <label for="code">Tu código</label><input id="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="······">
   <div id="err" role="alert">${msg?esc(msg):''}</div>
   <button class="go" id="go" type="submit" disabled>Entrar</button><small>Datos actualizados el ${new Date(DATA.generated+'T12:00:00').toLocaleDateString('es-ES',{day:'numeric',month:'long'})} · Preparación física</small></form></div>`;
@@ -320,18 +320,18 @@ function weekBlock(p,prof){
   if(!p.sessions.length)return '';const last=p.sessions[p.sessions.length-1].d,wk=weekOf(last);
   const W=p.sessions.filter(s=>weekOf(s.d)===wk);
   const tot=k=>W.reduce((a,s)=>a+(s[k]||0),0);
-  const mx=Math.max(1,...W.map(s=>s.hsr||0),prof.hsr||0);
-  const cols=W.map(s=>{const h=(s.hsr||0)/mx*100,m=s.md==='MD';return `<div class="wc"><div class="wb"><span class="wv" style="bottom:calc(${Math.max(2,h)}% + 4px)">${fmt('hsr',s.hsr)}</span><i class="${m?'m':''}" style="height:${Math.max(2,h)}%"></i>${prof.hsr?`<em style="bottom:${Math.min(100,prof.hsr/mx*100)}%"></em>`:''}</div><div class="wd">${m?'Partido':s.md}</div><div class="wdd">${dm(s.d)}</div></div>`}).join('');
-  const tiles=[['dist','km'],['hsr','m'],['spr','m'],['acc','nº']].map(([k,u])=>{const t=tot(k),x=prof[k]?t/prof[k]:null;return `<div class="wt"><span>${K.find(z=>z[0]===k)[1]}</span><b>${fmt(k,t)}<small>${u}</small></b><em>${x==null?'':`= ${x.toLocaleString('es-ES',{maximumFractionDigits:1})} × tu partido`}</em></div>`}).join('');
+  const mx=Math.max(1,...W.map(s=>s.hsr||0));
+  const cols=W.map(s=>{const h=(s.hsr||0)/mx*100,m=s.md==='MD';return `<div class="wc"><div class="wb"><span class="wv" style="bottom:calc(${Math.max(2,h)}% + 4px)">${fmt('hsr',s.hsr)}</span><i class="${m?'m':''}" style="height:${Math.max(2,h)}%"></i></div><div class="wd">${m?'Partido':s.md}</div><div class="wdd">${dm(s.d)}</div></div>`}).join('');
+  const tiles=[['dist','km'],['hsr','m'],['spr','m'],['acc','nº']].map(([k,u])=>{const t=tot(k),x=prof[k]?t/prof[k]:null;return `<div class="wt"><span>${K.find(z=>z[0]===k)[1]}</span><b>${fmt(k,t)}<small>${u}</small></b></div>`}).join('');
   const s=new Date(wk+'T12:00:00'),e=new Date(s);e.setDate(e.getDate()+6);
-  return `<section class="block"><div class="block-h"><div><span class="eyebrow">Semana del ${s.getDate()} al ${e.toLocaleDateString('es-ES',{day:'numeric',month:'long'})}</span><h2>Tu semana</h2></div><p>Acumulado de la semana. La raya celeste en las columnas es tu HSR de partido.</p></div>
+  return `<section class="block"><div class="block-h"><div><span class="eyebrow">Semana del ${s.getDate()} al ${e.toLocaleDateString('es-ES',{day:'numeric',month:'long'})}</span><h2>Tu semana</h2></div><p>Lo que llevas acumulado esta semana.</p></div>
   <div class="wk"><div class="wtiles">${tiles}</div><div><div class="wl">Alta velocidad por día (m)</div><div class="wcols">${cols}</div></div></div></section>`}
 
 function chart(p){
   const k=st.metric,[,l,u]=K.find(x=>x[0]===k),S=p.sessions.slice(-16);
   if(!S.length)return '<div class="note">Todavía no hay sesiones con GPS.</div>';
   const W=880,H=300,L=46,R=16,T=26,B=48,iw=W-L-R,ih=H-T-B;
-  const mx=Math.max(1,...S.map(s=>Math.max(s[k]||0,(s.pos&&s.pos[k])||0)))*1.15;
+  const mx=Math.max(1,...S.map(s=>s[k]||0))*1.15;
   const step=niceStep(mx/4),ticks=[];for(let v=0;v<=mx;v+=step)ticks.push(v);
   const bw=iw/S.length,y=v=>T+ih-(v/mx)*ih,cx=i=>L+i*bw+bw/2;
   let g=ticks.map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"${v?' stroke-dasharray="2 4"':''}/><text x="${L-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(k,v)}</text>`).join('');
@@ -340,8 +340,8 @@ function chart(p){
   const line=pts.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ');
   g+=`<path d="${line} L ${pts[pts.length-1][0]} ${T+ih} L ${pts[0][0]} ${T+ih} Z" fill="url(#ga)"/>`;
   const pp=S.map((s,i)=>s.pos&&s.pos[k]!=null?[cx(i),y(s.pos[k])]:null).filter(Boolean);
-  if(pp.length>1)g+=`<path d="${pp.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ')}" fill="none" stroke="var(--yellow)" stroke-width="2.5" stroke-dasharray="6 5" stroke-linecap="round"/>`;
-  const prof=P.profile||P.posProfile;if(prof&&prof[k])g+=`<line x1="${L}" x2="${W-R}" y1="${y(prof[k])}" y2="${y(prof[k])}" stroke="var(--navy-l)" stroke-width="1.5"/><text x="${W-R}" y="${y(prof[k])-6}" text-anchor="end" font-size="10.5" font-weight="700" fill="var(--navy-l)">Tu partido · ${fmt(k,prof[k])}</text>`;
+  if(0)g+=`<path d="${pp.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ')}" fill="none" stroke="var(--yellow)" stroke-width="2.5" stroke-dasharray="6 5" stroke-linecap="round"/>`;
+  if(0)g+=`<line x1="${L}" x2="${W-R}" y1="${y(prof[k])}" y2="${y(prof[k])}" stroke="var(--navy-l)" stroke-width="1.5"/><text x="${W-R}" y="${y(prof[k])-6}" text-anchor="end" font-size="10.5" font-weight="700" fill="var(--navy-l)">Tu partido · ${fmt(k,prof[k])}</text>`;
   g+=`<path d="${line}" fill="none" stroke="var(--blue)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
   S.forEach((s,i)=>{const m=s.md==='MD',[x,yy]=pts[i];
     g+=`<circle cx="${x}" cy="${yy}" r="${m?7:4.5}" fill="${m?'#1d4fc4':'var(--surface)'}" stroke="var(--blue)" stroke-width="${m?3:2.5}"><title>${fdate(s.d)} · ${fmt(k,s[k])} ${u}</title></circle>`;
@@ -364,17 +364,13 @@ function render(){
   app.innerHTML=`<div class="top"><img src="${CREST}" alt=""><div><b>Mis datos GPS</b><span>Deportivo Alavés · Femenino B · 26/27</span></div><div class="sp"></div><button id="chg">Salir</button></div>
   <header class="hero">${p.dorsal?`<span class="dor" aria-hidden="true">${esc(p.dorsal)}</span>`:''}${p.photo?`<img src="${p.photo}" alt="">`:''}
    <div class="id"><span class="pill">${esc(p.pos)}${p.line?' · '+esc(p.line):''}</span><h1>${esc(parts[0])}<span>${esc(parts.slice(1).join(' '))}</span></h1>
-   <p>${own?`Perfil de partido · media de tus ${Math.min(DATA.top,p.nMatches)} mejores partidos de ${DATA.minMin}' o más`:`Aún sin partido de ${DATA.minMin}' · se usan valores de tu posición`}</p>
-   <div class="kpis">${[['dist','km','Distancia'],['hsr','m','HSR >19'],['spr','m','Sprint >23'],['vmax','km/h','Vel. máx.']].map(([k,u,l])=>`<div><b>${fmt(k,prof[k])}<small>${u}</small></b><span>${l}</span></div>`).join('')}</div></div></header>
+   ${own?`<p>Tu media en tus mejores partidos completos</p><div class="kpis">${[['dist','km','Distancia'],['hsr','m','HSR >19'],['spr','m','Sprint >23'],['vmax','km/h','Vel. máx.']].map(([k,u,l])=>`<div><b>${fmt(k,prof[k])}<small>${u}</small></b><span>${l}</span></div>`).join('')}</div>`:''}</div></header>
   <div class="recs" aria-label="Tus mejores marcas">${rec('Tu velocidad máxima',bV,'vmax','km/h')}${rec('Más HSR en partido',bH,'hsr','m')}${rec('Más distancia en partido',bD,'dist','km')}${rec('Más sprint en un día',bS,'spr','m')}</div>
   <section class="block"><div class="block-h"><div><span class="eyebrow">${D0?fdate(D0.d)+' · '+(MDN[D0.md]||D0.md)+(D0.min?' · '+D0.min+"'":''):''}</span><h2>Tu último día</h2></div>
    <div class="daytabs" role="group" aria-label="Día"><button data-d="t" aria-pressed="${st.day==='t'}">Entreno</button><button data-d="m" aria-pressed="${st.day==='m'}">Partido</button></div></div>
-   ${D0?`<p class="lead">El anillo es el <b>% de tu partido</b> que hiciste ese día${st.day==='t'?' (velocidad máx.: % de tu mejor marca)':''}. Debajo, cómo quedas frente a la media de ${refLbl} ese día.</p><div class="rings">${K.map(([k,l,u])=>ring(k,l,u,D0[k],pref[k],D0.pos&&D0.pos[k])).join('')}</div>`:'<div class="note">Sin datos todavía.</div>'}</section>
+   ${D0?`<div class="rings">${K.map(([k,l,u])=>`<div class="ring"><div class="rt"><div class="l">${l}</div><div class="v">${fmt(k,D0[k])}<small>${u}</small></div></div></div>`).join('')}</div>`:'<div class="note">Sin datos todavía.</div>'}</section>
   ${weekBlock(p,prof)}
-  <section class="block"><div class="block-h"><div><span class="eyebrow">${own?`${Math.min(DATA.top,p.nMatches)} mejores partidos ≥ ${DATA.minMin}'`:'Valores de tu posición'}</span><h2>Tu perfil de partido</h2></div><p>Azul: tú. Celeste discontinuo: media de ${refLbl}. Cuanto más hacia fuera, más cerca del máximo del equipo.</p></div>
-   ${own?'':`<div class="note">Todavía no tienes ningún partido de ${DATA.minMin}' o más con GPS. Mientras tanto ves los valores medios de tu posición.</div>`}
-   <div class="grid2">${radar(p,prof)}${pbars(prof,ref)}</div></section>
-  <section class="block"><div class="block-h"><div><span class="eyebrow">Últimas ${Math.min(16,p.sessions.length)} sesiones</span><h2>Evolución</h2></div><p>Puntos rellenos: partidos. Celeste discontinua: media de ${refLbl} ese día. Línea fina: tu valor de partido.</p></div>
+  <section class="block"><div class="block-h"><div><span class="eyebrow">Últimas ${Math.min(16,p.sessions.length)} sesiones</span><h2>Evolución</h2></div><p>Los puntos rellenos son partidos.</p></div>
    <div class="chips" role="group" aria-label="Variable">${K.map(([k,l])=>`<button data-m="${k}" aria-pressed="${st.metric===k}">${l}</button>`).join('')}</div>${chart(p)}
    <details><summary>Ver todas las sesiones</summary><div class="tblwrap"><table class="tbl"><thead><tr><th>Fecha</th><th>Día</th><th>Min</th>${K.map(([,l,u])=>`<th>${l}<br>(${u})</th>`).join('')}</tr></thead><tbody>
    ${[...p.sessions].reverse().map(s=>`<tr><td>${fdate(s.d)}</td><td><span class="md ${s.md==='MD'?'m':''}">${MDN[s.md]||s.md}</span></td><td>${s.min?s.min+"'":'–'}</td>${K.map(([k])=>`<td>${fmt(k,s[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details></section>
