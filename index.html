@@ -266,11 +266,18 @@ const fdate=d=>new Date(d+'T12:00:00').toLocaleDateString('es-ES',{weekday:'shor
 const dm=d=>new Date(d+'T12:00:00').toLocaleDateString('es-ES',{day:'numeric',month:'numeric'});
 let st={metric:'hsr'},P=null;
 
-async function unlock(code){const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
-  const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(code.trim().toUpperCase()),'PBKDF2',false,['deriveKey']);
-  const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(DATA.salt),iterations:200000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['decrypt']);
-  for(const p of DATA.players){try{const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(p.i)},key,b64(p.c));return JSON.parse(new TextDecoder().decode(pt))}catch(_){}}
-  throw new Error('no')}
+const SHEET='https://docs.google.com/spreadsheets/d/1-zvVoH8RvxJp4x-Va4jmPcNEBH-N6pt73WPRi_cbOVA/gviz/tq?tqx=out:csv&headers=0&sheet=Hoja%201';
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function keyFor(code,salt){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(code.trim().toUpperCase()),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(salt),iterations:200000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['decrypt'])}
+async function tryAll(key,list){for(const p of list){try{const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(p.i)},key,b64(p.c));return JSON.parse(new TextDecoder().decode(pt))}catch(_){}}return null}
+async function fresh(code){try{const r=await fetch(SHEET+'&t='+Date.now(),{cache:'no-store'});if(!r.ok)return null;const t=await r.text();
+  const rows=t.trim().split(/\r?\n/).map(l=>l.split(',').map(x=>x.replace(/^"|"$/g,'')));const meta=JSON.parse(atob(rows[0][0]));
+  const list=rows.slice(1).filter(r=>r[0]).map(r=>({i:r[0],c:r.slice(1).join('')}));const o=await tryAll(await keyFor(code,meta.salt),list);return o?{o,meta}:null}catch(_){return null}}
+async function unlock(code){
+  const [st,fr]=await Promise.all([(async()=>{try{return await tryAll(await keyFor(code,DATA.salt),DATA.players)}catch(_){return null}})(),fresh(code)]);
+  if(fr){const o=fr.o;if(st&&st.photo)o.photo=st.photo;['generated','minMin','top','max'].forEach(k=>{if(fr.meta[k]!=null)DATA[k]=fr.meta[k]});return o}
+  if(st)return st;throw new Error('no')}
 function gate(msg){
   app.innerHTML=`<div class="gate"><form class="gate-card" id="gf"><img class="crest" src="${CREST}" alt=""><span class="eyebrow" style="display:block">Deportivo Alavés · Femenino B · 26/27</span><h1>Mis datos GPS</h1><p>Tus números de entrenos y partidos, comparados con tu perfil de partido y con tu posición. Entra con tu código personal.</p>
   <label for="code">Tu código</label><input id="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="······">
@@ -355,7 +362,7 @@ function render(){
   const pref=Object.assign({},prof);if(bV&&bV.vmax)pref.vmax=bV.vmax;
   const rec=(lab,s,k,u)=>s?`<div class="rc"><span>${lab}</span><b>${fmt(k,s[k])}<small>${u}</small></b><em>${fdate(s.d)}${s.md==='MD'?' · partido':''}</em></div>`:'';
   app.innerHTML=`<div class="top"><img src="${CREST}" alt=""><div><b>Mis datos GPS</b><span>Deportivo Alavés · Femenino B · 26/27</span></div><div class="sp"></div><button id="chg">Salir</button></div>
-  <header class="hero">${p.dorsal?`<span class="dor" aria-hidden="true">${esc(p.dorsal)}</span>`:''}<img src="${p.photo}" alt="">
+  <header class="hero">${p.dorsal?`<span class="dor" aria-hidden="true">${esc(p.dorsal)}</span>`:''}${p.photo?`<img src="${p.photo}" alt="">`:''}
    <div class="id"><span class="pill">${esc(p.pos)}${p.line?' · '+esc(p.line):''}</span><h1>${esc(parts[0])}<span>${esc(parts.slice(1).join(' '))}</span></h1>
    <p>${own?`Perfil de partido · media de tus ${Math.min(DATA.top,p.nMatches)} mejores partidos de ${DATA.minMin}' o más`:`Aún sin partido de ${DATA.minMin}' · se usan valores de tu posición`}</p>
    <div class="kpis">${[['dist','km','Distancia'],['hsr','m','HSR >19'],['spr','m','Sprint >23'],['vmax','km/h','Vel. máx.']].map(([k,u,l])=>`<div><b>${fmt(k,prof[k])}<small>${u}</small></b><span>${l}</span></div>`).join('')}</div></div></header>
