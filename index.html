@@ -331,7 +331,7 @@ function chart(p){
   const k=st.metric,[,l,u]=K.find(x=>x[0]===k),S=p.sessions.slice(-16);
   if(!S.length)return '<div class="note">Todavía no hay sesiones con GPS.</div>';
   const W=880,H=300,L=46,R=16,T=26,B=48,iw=W-L-R,ih=H-T-B;
-  const mx=Math.max(1,...S.map(s=>s[k]||0))*1.15;
+  const mx=Math.max(1,...S.map(s=>Math.max(s[k]||0,(s.pos&&s.pos[k])||0)))*1.15;
   const step=niceStep(mx/4),ticks=[];for(let v=0;v<=mx;v+=step)ticks.push(v);
   const bw=iw/S.length,y=v=>T+ih-(v/mx)*ih,cx=i=>L+i*bw+bw/2;
   let g=ticks.map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"${v?' stroke-dasharray="2 4"':''}/><text x="${L-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(k,v)}</text>`).join('');
@@ -340,7 +340,7 @@ function chart(p){
   const line=pts.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ');
   g+=`<path d="${line} L ${pts[pts.length-1][0]} ${T+ih} L ${pts[0][0]} ${T+ih} Z" fill="url(#ga)"/>`;
   const pp=S.map((s,i)=>s.pos&&s.pos[k]!=null?[cx(i),y(s.pos[k])]:null).filter(Boolean);
-  if(0)g+=`<path d="${pp.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ')}" fill="none" stroke="var(--yellow)" stroke-width="2.5" stroke-dasharray="6 5" stroke-linecap="round"/>`;
+  if(pp.length>1)g+=`<path d="${pp.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ')}" fill="none" stroke="var(--yellow)" stroke-width="2.5" stroke-dasharray="6 5" stroke-linecap="round"/>`;
   if(0)g+=`<line x1="${L}" x2="${W-R}" y1="${y(prof[k])}" y2="${y(prof[k])}" stroke="var(--navy-l)" stroke-width="1.5"/><text x="${W-R}" y="${y(prof[k])-6}" text-anchor="end" font-size="10.5" font-weight="700" fill="var(--navy-l)">Tu partido · ${fmt(k,prof[k])}</text>`;
   g+=`<path d="${line}" fill="none" stroke="var(--blue)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
   S.forEach((s,i)=>{const m=s.md==='MD',[x,yy]=pts[i];
@@ -368,9 +368,11 @@ function render(){
   <div class="recs" aria-label="Tus mejores marcas">${rec('Tu velocidad máxima',bV,'vmax','km/h')}${rec('Más HSR en partido',bH,'hsr','m')}${rec('Más distancia en partido',bD,'dist','km')}${rec('Más sprint en un día',bS,'spr','m')}</div>
   <section class="block"><div class="block-h"><div><span class="eyebrow">${D0?fdate(D0.d)+' · '+(MDN[D0.md]||D0.md)+(D0.min?' · '+D0.min+"'":''):''}</span><h2>Tu último día</h2></div>
    <div class="daytabs" role="group" aria-label="Día"><button data-d="t" aria-pressed="${st.day==='t'}">Entreno</button><button data-d="m" aria-pressed="${st.day==='m'}">Partido</button></div></div>
-   ${D0?`<div class="rings">${K.map(([k,l,u])=>`<div class="ring"><div class="rt"><div class="l">${l}</div><div class="v">${fmt(k,D0[k])}<small>${u}</small></div></div></div>`).join('')}</div>`:'<div class="note">Sin datos todavía.</div>'}</section>
+   ${D0?`<div class="rings">${K.map(([k,l,u])=>`<div class="ring"><div class="rt"><div class="l">${l}</div><div class="v">${fmt(k,D0[k])}<small>${u}</small></div><div class="d">${(()=>{const r=D0.pos&&D0.pos[k],v=D0[k];if(r==null||v==null||!r)return '';const d=v/r-1;return `<span class="chip ${d>=0?'pos':'neg'}">${d>=0?'+':'−'}${Math.round(Math.abs(d)*100)}%</span> vs media ${refLbl} (${fmt(k,r)})`})()}</div></div></div>`).join('')}</div>`:'<div class="note">Sin datos todavía.</div>'}</section>
   ${weekBlock(p,prof)}
-  <section class="block"><div class="block-h"><div><span class="eyebrow">Últimas ${Math.min(16,p.sessions.length)} sesiones</span><h2>Evolución</h2></div><p>Los puntos rellenos son partidos.</p></div>
+  <section class="block"><div class="block-h"><div><span class="eyebrow">${own?`Tus ${Math.min(DATA.top,p.nMatches)} mejores partidos ≥ ${DATA.minMin}'`:'Aún sin partido completo'}</span><h2>Tú y tu posición</h2></div><p>Azul: tú en partido. Celeste discontinuo: media de ${refLbl}.</p></div>
+   ${own?`<div class="grid2">${radar(p,prof)}${pbars(prof,ref)}</div>`:`<div class="note">Cuando juegues un partido de ${DATA.minMin}' o más con GPS verás aquí tu comparación con ${refLbl}.</div>`}</section>
+  <section class="block"><div class="block-h"><div><span class="eyebrow">Últimas ${Math.min(16,p.sessions.length)} sesiones</span><h2>Evolución</h2></div><p>Los puntos rellenos son partidos. Línea celeste discontinua: media de ${refLbl} ese día.</p></div>
    <div class="chips" role="group" aria-label="Variable">${K.map(([k,l])=>`<button data-m="${k}" aria-pressed="${st.metric===k}">${l}</button>`).join('')}</div>${chart(p)}
    <details><summary>Ver todas las sesiones</summary><div class="tblwrap"><table class="tbl"><thead><tr><th>Fecha</th><th>Día</th><th>Min</th>${K.map(([,l,u])=>`<th>${l}<br>(${u})</th>`).join('')}</tr></thead><tbody>
    ${[...p.sessions].reverse().map(s=>`<tr><td>${fdate(s.d)}</td><td><span class="md ${s.md==='MD'?'m':''}">${MDN[s.md]||s.md}</span></td><td>${s.min?s.min+"'":'–'}</td>${K.map(([k])=>`<td>${fmt(k,s[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details></section>
